@@ -3,7 +3,8 @@ import {
   LayoutGrid, Camera, ShieldAlert, Map as MapIcon, Bell, GitBranch, Search, X, Play,
   Upload, CheckCircle2, AlertTriangle, MapPin, ZoomIn, ZoomOut, Layers, ArrowRight,
   Clock, Radio, Target, ChevronRight, Menu, TreePine, Activity, Crosshair, RefreshCw,
-  Check, ChevronDown, ScanLine, Waves, Compass, BellRing, ExternalLink
+  Check, ChevronDown, ScanLine, Waves, Compass, BellRing, ExternalLink, Mic, MicOff,
+  Volume2, VolumeX, Sun, Moon, Accessibility, Pause
 } from "lucide-react";
 
 /* ============================== DEMO DATA ============================== */
@@ -120,7 +121,87 @@ const NAV_ITEMS = [
   { id: "pipeline", label: "Intelligence Pipeline", icon: GitBranch },
 ];
 
+const translations = {
+  en: {
+    nav: { command: "Command Center", wildlife: "Wildlife Detection", risk: "Risk Intelligence", gis: "GIS Map", alerts: "Alerts", pipeline: "Intelligence Pipeline" },
+    theme: { dark: "Dark mode", light: "Light mode", label: "Switch to dark mode", iconLabel: "Toggle theme" },
+    language: { label: "Language", english: "English", hindi: "हिन्दी" },
+    accessibility: {
+      button: "Accessibility",
+      title: "Accessibility Tools",
+      dyslexia: "Dyslexia-Friendly Font",
+      speech: "Speech to Text",
+      tts: "Text to Speech",
+      read: "Read",
+      stop: "Stop",
+      pause: "Pause",
+      resume: "Resume",
+      unsupportedSpeech: "Speech recognition is not supported in this browser.",
+      unsupportedTts: "Text-to-speech is not supported in this browser.",
+      listening: "Listening…",
+      ready: "Ready",
+      status: "Accessibility ready",
+      selectText: "Select text to read aloud",
+      readSelection: "Read selection"
+    },
+    ui: { searchPlaceholder: "Search zone, species, alert…", runDemo: "Run KAVACH Demo", collapse: "Collapse", voice: "Voice", read: "Read", ready: "Ready" },
+    alerts: { noMatches: "No matches for" },
+    empty: "No results"
+  },
+  hi: {
+    nav: { command: "कमांड सेंटर", wildlife: "वन्यजीव पता लगाना", risk: "जोखिम बोध", gis: "जीआईएस नक्शा", alerts: "अलर्ट", pipeline: "बुद्धिमत्ता पाइपलाइन" },
+    theme: { dark: "डार्क मोड", light: "लाइट मोड", label: "डार्क मोड पर स्विच करें", iconLabel: "थीम बदलें" },
+    language: { label: "भाषा", english: "English", hindi: "हिन्दी" },
+    accessibility: {
+      button: "एक्सेसिबिलिटी",
+      title: "एक्सेसिबिलिटी टूल्स",
+      dyslexia: "डिस्लेक्सिया-फ्रेंडली फ़ॉन्ट",
+      speech: "स्पीच टू टेक्स्ट",
+      tts: "टेक्स्ट टू स्पीच",
+      read: "पढ़ें",
+      stop: "रोकें",
+      pause: "रोकें",
+      resume: "फिर से शुरू करें",
+      unsupportedSpeech: "इस ब्राउज़र में स्पीच रिकॉग्निशन समर्थित नहीं है।",
+      unsupportedTts: "इस ब्राउज़र में टेक्स्ट-टू-स्पीच समर्थित नहीं है।",
+      listening: "सुन रहा है…",
+      ready: "तैयार",
+      status: "एक्सेसिबिलिटी तैयार है",
+      selectText: "पढ़ने के लिए टेक्स्ट चुनें",
+      readSelection: "चयनित पाठ पढ़ें"
+    },
+    ui: { searchPlaceholder: "ज़ोन, प्रजाति, अलर्ट खोजें…", runDemo: "KAVACH डेमो चलाएँ", collapse: "संक्षिप्त करें", voice: "वॉयस", read: "पढ़ें", ready: "तैयार" },
+    alerts: { noMatches: "कोई परिणाम नहीं" },
+    empty: "कोई परिणाम नहीं"
+  }
+};
+
 const PROCESSING_STAGES = ["INGESTING IMAGE", "RUNNING AI DETECTION", "EXTRACTING FEATURES", "DETECTION COMPLETE"];
+
+function getStoredPreference(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const value = localStorage.getItem(key);
+    return value ?? fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function getSystemTheme() {
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function getTranslation(language, keyPath, fallback = "") {
+  const path = keyPath.split(".");
+  let current = translations[language] || translations.en;
+  for (const part of path) {
+    current = current?.[part];
+    if (!current) return fallback;
+  }
+  return current;
+}
 
 /* ============================== STYLES ============================== */
 
@@ -140,22 +221,80 @@ body,
 * {
   box-sizing: border-box;
 }
-    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
 
     .kavach, .kavach * { box-sizing: border-box; }
     .kavach {
-      --void:#0A100C; --panel:#111A13; --panel-raised:#17221A; --panel-hi:#1D2A20;
-      --line:#243428; --line-soft:#1A251C;
-      --text:#E9EEE4; --text-muted:#8DA089; --text-dim:#5E6E5B;
-      --amber:#E8A33D; --amber-dim:#7A5A24;
-      --low:#4CAF6D; --medium:#E8A33D; --high:#E4553D;
+      --void:#0B1712; --panel:#101E18; --panel-raised:#13271F; --panel-hi:#183828;
+      --line:#234634; --line-soft:#1d342c;
+      --text:#EEF4EE; --text-muted:#A4B7AC; --text-dim:#7A9183;
+      --amber:#D6A84F; --amber-dim:#8A6830;
+      --low:#4F8A64; --medium:#D99A32; --high:#C94C4C;
+      --bg: radial-gradient(circle at top left, rgba(47,107,79,0.28) 0%, rgba(11,23,18,0.85) 32%, #0B1712 100%);
       font-family:'IBM Plex Sans', sans-serif;
-      background: radial-gradient(ellipse at top left, #10190F 0%, #0A100C 60%);
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       width: 100%;
       position: relative;
       overflow-x: hidden;
+    }
+    .kavach[data-theme="light"] {
+      --void:#F4F1E8; --panel:#F7F4EE; --panel-raised:#FFFFFF; --panel-hi:#EFE8D8;
+      --line:#D5CCB2; --line-soft:#E6E0CE;
+      --text:#12372A; --text-muted:#365D4B; --text-dim:#5B7367;
+      --amber:#D6A84F; --amber-dim:#C89A3E;
+      --low:#4F8A64; --medium:#D99A32; --high:#C94C4C;
+      --bg: linear-gradient(180deg, #F4F1E8 0%, #ECE6D8 100%);
+      color: var(--text);
+    }
+    .kavach[data-theme="light"] .kv-panel,
+    .kavach[data-theme="light"] .kv-btn,
+    .kavach[data-theme="light"] .kv-accessibility-btn,
+    .kavach[data-theme="light"] .kv-status-pill,
+    .kavach[data-theme="light"] .kv-tag {
+      box-shadow: 0 8px 18px rgba(18, 55, 42, 0.08);
+    }
+    .kavach[data-theme="light"] .kv-accessibility-btn {
+      background: #ffffff;
+      border-color: #d5ccb2;
+      color: #12372A;
+    }
+    .kavach[data-theme="light"] .kv-accessibility-btn.is-active {
+      background: rgba(214,168,79,0.12);
+      border-color: #d6a84f;
+      color: #6d4a11;
+    }
+    .kavach[data-theme="light"] .kv-status-pill {
+      background: #f8f5ef;
+      color: #173d2f;
+      border-color: #d5ccb2;
+    }
+    .kavach[data-theme="light"] .kv-status-pill .dot {
+      box-shadow: 0 0 12px rgba(79,138,100,0.35);
+    }
+    .kavach[data-high-contrast="true"] {
+      --panel:#000000; --panel-raised:#111111; --panel-hi:#1a1a1a; --line:#ffffff; --line-soft:#d9d9d9;
+      --text:#ffffff; --text-muted:#f2f2f2; --text-dim:#d9d9d9;
+      --amber:#ffd166; --amber-dim:#ffd166; --low:#9ae6b4; --medium:#ffd166; --high:#ff7a7a;
+    }
+    .kavach[data-color-blind="true"] {
+      --low:#3B82F6; --medium:#D97706; --high:#B91C1C;
+    }
+    .kavach[data-reduce-motion="true"] *,
+    .kavach[data-reduce-motion="true"] *::before,
+    .kavach[data-reduce-motion="true"] *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .kavach.dyslexia-mode, .kavach.dyslexia-mode * {
+      font-family:'Atkinson Hyperlegible', 'Lexend', 'IBM Plex Sans', sans-serif !important;
+      letter-spacing: 0.01em;
+    }
+    .kavach.dyslexia-mode p, .kavach.dyslexia-mode div, .kavach.dyslexia-mode span, .kavach.dyslexia-mode button {
+      line-height: 1.6;
     }
     .kavach .kv-display { font-family:'Rajdhani', sans-serif; letter-spacing: 0.02em; }
     .kavach .kv-mono { font-family:'IBM Plex Mono', monospace; }
@@ -200,6 +339,42 @@ body,
       padding: 3px 7px; border-radius: 2px; border: 1px solid var(--line); color: var(--text-muted);
       text-transform: uppercase; display:inline-flex; align-items:center; gap:5px;
     }
+
+    .kv-panel {
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .kv-btn, .kv-panel, .kv-tag, input, select {
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .kv-btn:hover, .kv-panel:hover { transform: translateY(-1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid rgba(232,163,61,0.8);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(232,163,61,0.12);
+    }
+    .kv-accessibility-toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .kv-accessibility-btn {
+      display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+      padding: 8px 12px; border: 1px solid var(--line); background: rgba(23,34,26,0.9);
+      color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .kv-accessibility-btn.is-active {
+      border-color: rgba(232,163,61,0.8); background: rgba(232,163,61,0.12); color: var(--amber);
+    }
+    .kv-status-pill {
+      display:inline-flex; align-items:center; gap:6px; padding: 4px 8px; border-radius: 999px;
+      border:1px solid var(--line); background: rgba(17,26,19,0.9); color: var(--text-muted);
+      font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+    }
+    .kv-status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--low); display:inline-block;
+      box-shadow: 0 0 12px rgba(76,175,109,0.7);
+    }
+    .kv-status-pill.listening .dot { background: var(--amber); box-shadow: 0 0 12px rgba(232,163,61,0.7); }
+    .kv-status-pill.speaking .dot { background: var(--high); box-shadow: 0 0 12px rgba(228,85,61,0.7); }
   `}</style>
 );
 
@@ -247,6 +422,102 @@ function FeatureLevelPill({ level }) {
   );
 }
 
+function getPageSummary(page, data) {
+  if (page === "command") {
+    return `KAVACH command center. ${data.detections} wildlife detections logged, ${data.pendingAlerts} pending alerts, and ${data.highRiskZones} high risk zones in active monitoring.`;
+  }
+  if (page === "wildlife") {
+    return `Wildlife detection view. ${data.detections} detections have been captured across ${data.speciesCount} species. Review recent camera trap results and the latest classification confidence scores.`;
+  }
+  if (page === "risk") {
+    return `Risk intelligence view. The current analysis shows ${data.zoneName} with a ${data.zoneRisk} percent conflict risk score.`;
+  }
+  if (page === "gis") {
+    return `GIS map view. Spatial hotspot monitoring is active for ${data.zoneCount} monitored zones across the reserve.`;
+  }
+  if (page === "alerts") {
+    return `Alerts board. ${data.pendingAlerts} alerts remain pending and ${data.acknowledgedAlerts} have been acknowledged by field teams.`;
+  }
+  if (page === "pipeline") {
+    return `Intelligence pipeline overview. Camera trap imagery flows through detection, risk scoring, and alert generation stages.`;
+  }
+  return "KAVACH overview.";
+}
+
+function useVoiceAccessibility() {
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceSupported(Boolean(SpeechRecognitionCtor));
+
+    if (!SpeechRecognitionCtor) return undefined;
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+
+    return () => recognition.stop();
+  }, []);
+
+  const startListening = (onTranscript) => {
+    if (!recognitionRef.current) {
+      alert("Speech-to-text is not supported in this browser. Try a Chromium-based browser for voice dictation.");
+      return;
+    }
+
+    recognitionRef.current.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0].transcript)
+        .join(" ")
+        .trim();
+
+      if (transcript && onTranscript) onTranscript(transcript);
+    };
+
+    recognitionRef.current.start();
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) recognitionRef.current.stop();
+  };
+
+  const speak = (text) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      alert("Text-to-speech is not supported in this browser.");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  return { voiceSupported, isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking };
+}
+
 /* ============================== APP CONTEXT ============================== */
 
 const Ctx = createContext(null);
@@ -271,6 +542,51 @@ function AppProvider({ children }) {
 
   const [pendingRiskZoneId, setPendingRiskZoneId] = useState("Z-04");
   const [demoOpen, setDemoOpen] = useState(false);
+
+  const [theme, setTheme] = useState(() => {
+    const stored = getStoredPreference("kavach-theme", getSystemTheme());
+    return stored === "light" || stored === "dark" ? stored : "dark";
+  });
+  const [language, setLanguage] = useState(() => getStoredPreference("kavach-language", "en"));
+  const [dyslexiaFont, setDyslexiaFont] = useState(() => getStoredPreference("kavach-dyslexia-font", "false") === "true");
+  const [fontScale, setFontScale] = useState(() => Number(getStoredPreference("kavach-font-scale", "1")) || 1);
+  const [highContrast, setHighContrast] = useState(() => getStoredPreference("kavach-high-contrast", "false") === "true");
+  const [colorBlindMode, setColorBlindMode] = useState(() => getStoredPreference("kavach-color-blind", "false") === "true");
+  const [reduceMotion, setReduceMotion] = useState(() => getStoredPreference("kavach-reduce-motion", "false") === "true");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("kavach-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dyslexia-mode", dyslexiaFont);
+    localStorage.setItem("kavach-dyslexia-font", String(dyslexiaFont));
+  }, [dyslexiaFont]);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-language", language);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-font-scale", String(fontScale));
+    document.documentElement.setAttribute("data-font-scale", String(fontScale));
+  }, [fontScale]);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-high-contrast", String(highContrast));
+    document.documentElement.setAttribute("data-high-contrast", String(highContrast));
+  }, [highContrast]);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-color-blind", String(colorBlindMode));
+    document.documentElement.setAttribute("data-color-blind", String(colorBlindMode));
+  }, [colorBlindMode]);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-reduce-motion", String(reduceMotion));
+    document.documentElement.setAttribute("data-reduce-motion", String(reduceMotion));
+  }, [reduceMotion]);
 
   function navigate(target, opts = {}) {
     setPage(target);
@@ -324,6 +640,13 @@ function AppProvider({ children }) {
     pendingRiskZoneId, setPendingRiskZoneId,
     demoOpen, setDemoOpen,
     pendingAlertCount, highRiskZoneCount, activeRiskZoneCount,
+    theme, setTheme,
+    language, setLanguage,
+    dyslexiaFont, setDyslexiaFont,
+    fontScale, setFontScale,
+    highContrast, setHighContrast,
+    colorBlindMode, setColorBlindMode,
+    reduceMotion, setReduceMotion,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -331,8 +654,268 @@ function AppProvider({ children }) {
 
 /* ============================== SHELL ============================== */
 
+function ThemeToggle() {
+  const { theme, setTheme, language } = useApp();
+  const isDark = theme === "dark";
+  const label = isDark ? getTranslation(language, "theme.light") : getTranslation(language, "theme.dark");
+  const ariaLabel = isDark ? `${getTranslation(language, "theme.label").replace("Switch to dark mode", "Switch to light mode")}` : getTranslation(language, "theme.label");
+
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="kv-btn kv-btn-ghost"
+      style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, padding: "8px 12px" }}
+    >
+      {isDark ? <Sun size={14} /> : <Moon size={14} />}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function LanguageSelector() {
+  const { language, setLanguage } = useApp();
+  return (
+    <label style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--text-muted)", fontSize: 12, fontWeight: 600 }}>
+      <span aria-hidden="true">🌐</span>
+      <select
+        aria-label="Select application language"
+        value={language}
+        onChange={e => setLanguage(e.target.value)}
+        style={{ ...selStyle, minWidth: 110, borderRadius: 999, background: "var(--panel-raised)", padding: "8px 10px" }}
+      >
+        <option value="en">English</option>
+        <option value="hi">हिन्दी</option>
+      </select>
+    </label>
+  );
+}
+
+function AccessibilityPanel({ open, onClose }) {
+  const {
+    language, dyslexiaFont, setDyslexiaFont, fontScale, setFontScale,
+    highContrast, setHighContrast, colorBlindMode, setColorBlindMode,
+    reduceMotion, setReduceMotion
+  } = useApp();
+  const [status, setStatus] = useState("Ready");
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const recognitionRef = useRef(null);
+  const t = translations[language] || translations.en;
+
+  const resetSettings = () => {
+    setDyslexiaFont(false);
+    setFontScale(1);
+    setHighContrast(false);
+    setColorBlindMode(false);
+    setReduceMotion(false);
+    setStatus("Settings reset");
+  };
+
+  useEffect(() => {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = language === "hi" ? "hi-IN" : "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      setStatus(t.accessibility.unsupportedSpeech);
+    };
+    recognition.onresult = event => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0]?.transcript ?? "")
+        .join(" ")
+        .trim();
+
+      if (transcript) {
+        setStatus(transcript);
+        const active = document.activeElement;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+          const start = active.selectionStart ?? active.value.length;
+          const end = active.selectionEnd ?? active.value.length;
+          const nextValue = `${active.value.slice(0, start)}${transcript}${active.value.slice(end)}`;
+          active.value = nextValue;
+          active.dispatchEvent(new Event("input", { bubbles: true }));
+          active.focus();
+          active.setSelectionRange(start + transcript.length, start + transcript.length);
+        }
+      }
+    };
+
+    recognitionRef.current = recognition;
+    return () => recognition.stop();
+  }, [language]);
+
+  const toggleDyslexia = () => setDyslexiaFont(v => !v);
+
+  const startSpeechRecognition = () => {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setStatus(t.accessibility.unsupportedSpeech);
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      setStatus(t.accessibility.unsupportedSpeech);
+      return;
+    }
+
+    setStatus(t.accessibility.listening);
+    recognitionRef.current.start();
+  };
+
+  const stopSpeechRecognition = () => {
+    if (recognitionRef.current) recognitionRef.current.stop();
+    setListening(false);
+    setStatus(t.accessibility.ready);
+  };
+
+  const speakText = () => {
+    if (!("speechSynthesis" in window)) {
+      setStatus(t.accessibility.unsupportedTts);
+      return;
+    }
+    const selectedText = window.getSelection()?.toString()?.trim();
+    const textToSpeak = selectedText || `KAVACH dashboard. ${document.title || "Application summary"}`;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = language === "hi" ? "hi-IN" : "en-US";
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setStatus(t.accessibility.reading || "Reading");
+  };
+
+  const pauseSpeech = () => {
+    if (!("speechSynthesis" in window)) return;
+    if (window.speechSynthesis.paused) window.speechSynthesis.resume(); else window.speechSynthesis.pause();
+  };
+
+  const stopSpeech = () => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    setSpeaking(false);
+    setStatus(t.accessibility.ready);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="kv-panel kv-fadein" style={{ position: "fixed", right: 26, bottom: 92, width: 300, zIndex: 90, padding: 18, background: "var(--panel)", borderColor: "var(--line)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div className="kv-display" style={{ fontSize: 18, fontWeight: 700 }}>{t.accessibility.title}</div>
+        <button type="button" aria-label="Close accessibility panel" onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-dim)" }}><X size={16} /></button>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Readability</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <button type="button" aria-label="Decrease text size" onClick={() => setFontScale(s => Math.max(0.9, +(s - 0.1).toFixed(2)))} className="kv-accessibility-btn" style={{ flex: 1, justifyContent: "center" }}>A−</button>
+            <button type="button" aria-label="Reset text size" onClick={() => setFontScale(1)} className="kv-accessibility-btn" style={{ flex: 1, justifyContent: "center" }}>A</button>
+            <button type="button" aria-label="Increase text size" onClick={() => setFontScale(s => Math.min(1.3, +(s + 0.1).toFixed(2)))} className="kv-accessibility-btn" style={{ flex: 1, justifyContent: "center" }}>A+</button>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 8, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: 8 }}>
+            <span style={{ fontSize: 13 }}>{t.accessibility.dyslexia}</span>
+            <button type="button" aria-label={dyslexiaFont ? "Disable dyslexia-friendly font" : "Enable dyslexia-friendly font"} onClick={toggleDyslexia} className={`kv-accessibility-btn ${dyslexiaFont ? "is-active" : ""}`} style={{ padding: "6px 10px", borderRadius: 999 }}>
+              {dyslexiaFont ? "On" : "Off"}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Voice</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button type="button" aria-label={listening ? "Stop speech to text" : "Start speech to text"} onClick={listening ? stopSpeechRecognition : startSpeechRecognition} className={`kv-accessibility-btn ${listening ? "is-active" : ""}`} style={{ justifyContent: "center" }}>
+              {listening ? <MicOff size={14} /> : <Mic size={14} />} {listening ? "Stop" : t.accessibility.speech}
+            </button>
+
+            <button type="button" aria-label="Play text to speech" onClick={speakText} className="kv-accessibility-btn" style={{ justifyContent: "center" }}>
+              <Volume2 size={14} /> {t.accessibility.tts}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Visual</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8 }}>
+              <span style={{ fontSize: 12 }}>High Contrast</span>
+              <button type="button" aria-label={highContrast ? "Disable high contrast" : "Enable high contrast"} onClick={() => setHighContrast(v => !v)} className={`kv-accessibility-btn ${highContrast ? "is-active" : ""}`} style={{ padding: "6px 10px", borderRadius: 999 }}>
+                {highContrast ? "ON" : "OFF"}
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8 }}>
+              <span style={{ fontSize: 12 }}>Color Blind Friendly</span>
+              <button type="button" aria-label={colorBlindMode ? "Disable color blind mode" : "Enable color blind mode"} onClick={() => setColorBlindMode(v => !v)} className={`kv-accessibility-btn ${colorBlindMode ? "is-active" : ""}`} style={{ padding: "6px 10px", borderRadius: 999 }}>
+                {colorBlindMode ? "ON" : "OFF"}
+              </button>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8 }}>
+              <span style={{ fontSize: 12 }}>Reduce Motion</span>
+              <button type="button" aria-label={reduceMotion ? "Disable reduced motion" : "Enable reduced motion"} onClick={() => setReduceMotion(v => !v)} className={`kv-accessibility-btn ${reduceMotion ? "is-active" : ""}`} style={{ padding: "6px 10px", borderRadius: 999 }}>
+                {reduceMotion ? "ON" : "OFF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" aria-label="Reset accessibility settings" onClick={resetSettings} className="kv-btn kv-btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
+        ↻ Reset Settings
+      </button>
+
+      <div className="kv-status-pill" style={{ marginTop: 12, width: "100%", justifyContent: "center" }}>
+        <span className={`dot ${listening ? "listening" : speaking ? "speaking" : ""}`} /> {status}
+      </div>
+    </div>
+  );
+}
+
+function AccessibilityButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Open accessibility tools"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          position: "fixed",
+          right: 22,
+          bottom: 22,
+          zIndex: 100,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          border: "1px solid var(--amber-dim)",
+          background: "linear-gradient(135deg, var(--amber), #f5d38d)",
+          color: "#1A1305",
+          boxShadow: "0 14px 28px rgba(232,163,61,0.28)",
+          cursor: "pointer"
+        }}
+      >
+        <Accessibility size={22} />
+      </button>
+      <AccessibilityPanel open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
 function Sidebar({ collapsed, setCollapsed }) {
-  const { page, navigate } = useApp();
+  const { page, navigate, language } = useApp();
+  const translatedNav = NAV_ITEMS.map(item => ({ ...item, label: getTranslation(language, `nav.${item.id}`) }));
   return (
     <div style={{
       width: collapsed ? 68 : 232, flexShrink: 0, background: "var(--panel)",
@@ -351,7 +934,7 @@ function Sidebar({ collapsed, setCollapsed }) {
         )}
       </div>
       <nav style={{ padding: "14px 10px", display: "flex", flexDirection: "column", gap: 3, flex: 1 }}>
-        {NAV_ITEMS.map(item => {
+        {translatedNav.map(item => {
           const Icon = item.icon;
           const active = page === item.id;
           return (
@@ -375,7 +958,7 @@ function Sidebar({ collapsed, setCollapsed }) {
       </nav>
       <button onClick={() => setCollapsed(c => !c)} className="kv-btn kv-btn-ghost" style={{ margin: 10, justifyContent: "center", borderColor: "var(--line-soft)" }}>
         <Menu size={14} />
-        {!collapsed && <span style={{ fontSize: 11 }}>COLLAPSE</span>}
+        {!collapsed && <span style={{ fontSize: 11 }}>{getTranslation(language, "ui.collapse", "Collapse")}</span>}
       </button>
     </div>
   );
@@ -386,25 +969,13 @@ function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const { startListening, isListening, voiceSupported, stopListening } = useVoiceAccessibility();
 
   useEffect(() => {
     function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
-
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    const out = [];
-    ZONES.forEach(z => {
-      if (z.name.toLowerCase().includes(q) || z.id.toLowerCase().includes(q) || z.species.toLowerCase().includes(q)) {
-        out.push({ type: "ZONE", label: `${z.id} · ${z.name}`, sub: z.species, action: () => navigate("gis", { zoneId: z.id, gisRiskFilter: "all", gisSpeciesFilter: "all" }) });
-      }
-    });
-    INITIAL_DETECTIONS.concat([]).forEach(() => {}); // noop keep list stable
-    return out;
-  }, [query]);
 
   const dynamicResults = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -423,18 +994,37 @@ function GlobalSearch() {
     return out.slice(0, 8);
   }, [query, navigate]);
 
+  const handleVoiceInput = (transcript) => {
+    const cleaned = transcript.replace(/\s+/g, " ").trim();
+    if (!cleaned) return;
+    setQuery(cleaned);
+    setOpen(true);
+  };
+
   return (
-    <div ref={ref} style={{ position: "relative", width: 320 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--panel-raised)", border: "1px solid var(--line)", borderRadius: 3, padding: "8px 12px" }}>
+    <div ref={ref} style={{ position: "relative", width: 360 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--panel-raised)", border: "1px solid var(--line)", borderRadius: 999, padding: "8px 12px" }}>
         <Search size={14} color="var(--text-dim)" />
         <input
+          aria-label="Search wildlife intelligence"
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Search zone, species, alert…"
           style={{ background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 13, width: "100%" }}
         />
-        {query && <X size={13} color="var(--text-dim)" onClick={() => setQuery("")} />}
+        {voiceSupported && (
+          <button
+            type="button"
+            aria-label={isListening ? "Stop voice search" : "Search using voice"}
+            onClick={() => isListening ? stopListening() : startListening(handleVoiceInput)}
+            className={`kv-accessibility-btn ${isListening ? "is-active" : ""}`}
+            style={{ padding: "6px 8px", borderRadius: "50%", width: 32, height: 32, justifyContent: "center" }}
+          >
+            {isListening ? <MicOff size={14} /> : <Mic size={14} />}
+          </button>
+        )}
+        {query && <button type="button" aria-label="Clear search" onClick={() => setQuery("")} style={{ background: "transparent", border: "none", display: "flex", padding: 0, color: "var(--text-dim)" }}><X size={13} /></button>}
       </div>
       {open && query && (
         <div className="kv-panel kv-fadein" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, maxHeight: 280, overflowY: "auto", boxShadow: "0 12px 32px rgba(0,0,0,0.5)" }}>
@@ -455,18 +1045,41 @@ function GlobalSearch() {
 }
 
 function Header() {
-  const { page, setDemoOpen } = useApp();
+  const { page, setDemoOpen, detections, alerts, highRiskZoneCount, pendingAlertCount, theme, language } = useApp();
   const current = NAV_ITEMS.find(n => n.id === page);
+  const { speak, stopSpeaking, isSpeaking } = useVoiceAccessibility();
+
+  const summary = getPageSummary(page, {
+    detections: detections.length,
+    pendingAlerts: pendingAlertCount,
+    highRiskZones: highRiskZoneCount,
+    acknowledgedAlerts: alerts.filter(a => a.status === "ACKNOWLEDGED").length,
+    speciesCount: [...new Set(detections.map(d => d.species))].length,
+    zoneName: ZONES[3].name,
+    zoneRisk: ZONES[3].risk,
+    zoneCount: ZONES.length,
+  });
+
   return (
     <div style={{ padding: "18px 28px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, background: "rgba(10,16,12,0.7)", backdropFilter: "blur(6px)" }}>
       <div>
         <div className="kv-mono" style={{ fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.12em", marginBottom: 3 }}>KAVACH / {current?.id.toUpperCase()}</div>
-        <div className="kv-display" style={{ fontSize: 22, fontWeight: 700 }}>{current?.label}</div>
+        <div className="kv-display" style={{ fontSize: 22, fontWeight: 700 }}>{getTranslation(language, `nav.${page}`, current?.label)}</div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
         <GlobalSearch />
+        <ThemeToggle />
+        <LanguageSelector />
+        <div className="kv-accessibility-toolbar">
+          <button type="button" aria-label={isSpeaking ? "Stop text to speech" : "Read page summary aloud"} onClick={() => isSpeaking ? stopSpeaking() : speak(summary)} className={`kv-accessibility-btn ${isSpeaking ? "is-active" : ""}`}>
+            {isSpeaking ? <VolumeX size={13} /> : <Volume2 size={13} />} {isSpeaking ? "Stop" : "Read"}
+          </button>
+          <div className={`kv-status-pill ${isSpeaking ? "speaking" : ""}`}>
+            <span className="dot" /> {isSpeaking ? "Speaking" : "Ready"}
+          </div>
+        </div>
         <button className="kv-btn kv-btn-primary" onClick={() => setDemoOpen(true)}>
-          <Play size={13} /> RUN KAVACH DEMO
+          <Play size={13} /> {getTranslation(language, "ui.runDemo", "Run KAVACH Demo")}
         </button>
       </div>
     </div>
@@ -475,7 +1088,7 @@ function Header() {
 
 function Shell() {
   const [collapsed, setCollapsed] = useState(false);
-  const { page, demoOpen } = useApp();
+  const { page, demoOpen, theme, dyslexiaFont, highContrast, colorBlindMode, reduceMotion, fontScale } = useApp();
 
   useEffect(() => {
     function handle() { setCollapsed(window.innerWidth < 980); }
@@ -485,7 +1098,14 @@ function Shell() {
   }, []);
 
   return (
-    <div className="kavach" style={{ display: "flex", minHeight: "100vh" }}>
+    <div
+      className={`kavach ${dyslexiaFont ? "dyslexia-mode" : ""}`}
+      data-theme={theme}
+      data-high-contrast={String(highContrast)}
+      data-color-blind={String(colorBlindMode)}
+      data-reduce-motion={String(reduceMotion)}
+      style={{ display: "flex", minHeight: "100vh", fontSize: `${fontScale}em` }}
+    >
       <GlobalStyle />
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -500,6 +1120,7 @@ function Shell() {
         </div>
       </div>
       {demoOpen && <DemoModal />}
+      <AccessibilityButton />
     </div>
   );
 }
@@ -536,18 +1157,28 @@ function CommandCenter() {
 
   return (
     <div className="kv-fadein">
-      <div className="kv-panel" style={{ padding: "28px 30px", marginBottom: 22, background: "linear-gradient(120deg, rgba(232,163,61,0.08), rgba(17,26,19,0.4))", position: "relative", overflow: "hidden" }}>
-        <div className="kv-tag" style={{ marginBottom: 12 }}><Radio size={11} /> DECISION-SUPPORT PROTOTYPE</div>
-        <div className="kv-display" style={{ fontSize: 28, fontWeight: 700, maxWidth: 640, lineHeight: 1.15 }}>
-          Human–wildlife conflict, seen before it happens.
+      <div className="kv-panel" style={{ padding: "28px 30px", marginBottom: 22, position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(214,168,79,0.10), rgba(18,55,42,0.14) 35%, rgba(11,23,18,0.88) 100%)" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 15% 15%, rgba(79,138,100,0.24), transparent 20%), radial-gradient(circle at 70% 20%, rgba(214,168,79,0.14), transparent 18%), linear-gradient(120deg, rgba(18,55,42,0.12), rgba(11,23,18,0.2))", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: "18px 0 0 0", background: "linear-gradient(rgba(255,255,255,0.02), transparent), repeating-linear-gradient(90deg, transparent 0 42px, rgba(157,174,164,0.08) 42px 43px), repeating-linear-gradient(180deg, transparent 0 42px, rgba(157,174,164,0.04) 42px 43px)", opacity: 0.7, pointerEvents: "none" }} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div className="kv-tag" style={{ marginBottom: 12 }}><Radio size={11} /> DECISION-SUPPORT PROTOTYPE</div>
+          <div className="kv-display" style={{ fontSize: 28, fontWeight: 700, maxWidth: 640, lineHeight: 1.15 }}>
+            Predictive wildlife conflict intelligence, built for field action.
+          </div>
+          <div style={{ color: "var(--text-muted)", fontSize: 14, marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
+            KAVACH links camera-trap detection, historical conflict data and settlement proximity into a single
+            early-warning pipeline — flagging high-risk corridors before an encounter occurs. Final decisions remain
+            with trained conservation professionals.
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 18 }}>
+            <button className="kv-btn kv-btn-primary" onClick={() => navigate("gis", { zoneId: "Z-04", gisRiskFilter: "all", gisSpeciesFilter: "all" })}>
+              <MapIcon size={13} /> VIEW HOTSPOTS
+            </button>
+            <button className="kv-btn kv-btn-ghost" onClick={() => navigate("alerts", { alertStatusFilter: "all", alertPriorityFilter: "all" })}>
+              <BellRing size={13} /> REVIEW ALERTS
+            </button>
+          </div>
         </div>
-        <div style={{ color: "var(--text-muted)", fontSize: 14, marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
-          KAVACH links camera-trap detection, historical conflict data and settlement proximity into a single
-          early-warning pipeline — flagging high-risk corridors before an encounter occurs. Final decisions remain
-          with trained conservation professionals.
-        </div>
-        <button className="kv-btn kv-btn-primary" style={{ marginTop: 18 }} onClick={() => useApp().setDemoOpen ? null : null}>
-        </button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 24 }}>
