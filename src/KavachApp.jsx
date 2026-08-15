@@ -7,6 +7,11 @@ import {
   Volume2, VolumeX, Sun, Moon, Accessibility, Pause
 } from "lucide-react";
 
+/* ============================== BACKEND CONFIG ============================== */
+
+// FastAPI (Ultralytics YOLO) backend — see backend/predict.py
+const API_BASE_URL = "http://localhost:8000";
+
 /* ============================== DEMO DATA ============================== */
 
 const SPECIES_LIST = ["Asian Elephant", "Leopard", "Wild Boar", "Spotted Deer", "Tiger"];
@@ -227,9 +232,9 @@ body,
     .kavach {
       --void:#0B1712; --panel:#101E18; --panel-raised:#13271F; --panel-hi:#183828;
       --line:#234634; --line-soft:#1d342c;
-      --text:#F5FFFE; --text-muted:#B8D0C8; --text-dim:#8BA39B;
-      --amber:#FFD966; --amber-dim:#E8C547;
-      --low:#5FD99A; --medium:#FFB84D; --high:#FF6B6B;
+      --text:#EEF4EE; --text-muted:#A4B7AC; --text-dim:#7A9183;
+      --amber:#D6A84F; --amber-dim:#8A6830;
+      --low:#4F8A64; --medium:#D99A32; --high:#C94C4C;
       --bg: radial-gradient(circle at top left, rgba(47,107,79,0.28) 0%, rgba(11,23,18,0.85) 32%, #0B1712 100%);
       font-family:'IBM Plex Sans', sans-serif;
       background: var(--bg);
@@ -238,60 +243,45 @@ body,
       width: 100%;
       position: relative;
       overflow-x: hidden;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
     .kavach[data-theme="light"] {
       --void:#F4F1E8; --panel:#F7F4EE; --panel-raised:#FFFFFF; --panel-hi:#EFE8D8;
       --line:#D5CCB2; --line-soft:#E6E0CE;
-      --text:#0A2B20; --text-muted:#1D4A3A; --text-dim:#3D6A5A;
-      --amber:#4CAF50; --amber-dim:#45a049;
-      --low:#2D7A4F; --medium:#D99A32; --high:#C94C4C;
-      --header-green: #DCEED8;
-      --header-text: #102A1B;
+      --text:#12372A; --text-muted:#365D4B; --text-dim:#5B7367;
+      --amber:#D6A84F; --amber-dim:#C89A3E;
+      --low:#4F8A64; --medium:#D99A32; --high:#C94C4C;
       --bg: linear-gradient(180deg, #F4F1E8 0%, #ECE6D8 100%);
-      background: var(--bg);
       color: var(--text);
-      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
     }
-    .kavach[data-theme="light"] .kv-display {
-      color: #0A2B20;
-    }
-    .kv-header {
-      border-top: 4px solid var(--amber);
-    }
-    .kavach[data-theme="light"] .kv-header {
-      border-top-color: #4CAF50;
-      background: rgba(244, 241, 232, 0.9);
-    }
-    .kv-header .kv-mono, .kv-header .kv-display {
-      color: inherit;
-    }
-    .kv-section-header {
-      padding: 14px 16px;
-      background: var(--panel-raised);
-      border-radius: 3px 3px 0 0;
-      border-bottom: 1px solid var(--line-soft);
-    }
-    .kavach[data-theme="light"] .kv-section-header {
-      background: var(--header-green);
-      color: var(--header-text);
-      border-color: #C8E6C0;
-    }
-    .kavach[data-theme="light"] .kv-section-header .kv-display,
-    .kavach[data-theme="light"] .kv-section-header .kv-mono {
-      color: var(--header-text);
-    }
+    .kavach[data-theme="light"] .kv-panel,
     .kavach[data-theme="light"] .kv-btn,
     .kavach[data-theme="light"] .kv-accessibility-btn,
     .kavach[data-theme="light"] .kv-status-pill,
     .kavach[data-theme="light"] .kv-tag {
       box-shadow: 0 8px 18px rgba(18, 55, 42, 0.08);
     }
+    .kavach[data-theme="light"] .kv-accessibility-btn {
+      background: #ffffff;
+      border-color: #d5ccb2;
+      color: #12372A;
+    }
+    .kavach[data-theme="light"] .kv-accessibility-btn.is-active {
+      background: rgba(214,168,79,0.12);
+      border-color: #d6a84f;
+      color: #6d4a11;
+    }
+    .kavach[data-theme="light"] .kv-status-pill {
+      background: #f8f5ef;
+      color: #173d2f;
+      border-color: #d5ccb2;
+    }
+    .kavach[data-theme="light"] .kv-status-pill .dot {
+      box-shadow: 0 0 12px rgba(79,138,100,0.35);
+    }
     .kavach[data-high-contrast="true"] {
       --panel:#000000; --panel-raised:#111111; --panel-hi:#1a1a1a; --line:#ffffff; --line-soft:#d9d9d9;
       --text:#ffffff; --text-muted:#f2f2f2; --text-dim:#d9d9d9;
       --amber:#ffd166; --amber-dim:#ffd166; --low:#9ae6b4; --medium:#ffd166; --high:#ff7a7a;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
     }
     .kavach[data-color-blind="true"] {
       --low:#3B82F6; --medium:#D97706; --high:#B91C1C;
@@ -338,43 +328,21 @@ body,
     .kv-btn {
       display:inline-flex; align-items:center; gap:8px; border-radius:3px;
       padding:10px 16px; font-size:13px; font-weight:600; letter-spacing:0.04em;
-      text-transform:uppercase; border:1px solid var(--line); background:rgba(19, 39, 31, 0.85);
-      color:var(--text); transition: all .15s ease; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      text-transform:uppercase; border:1px solid var(--line); background:var(--panel-raised);
+      color:var(--text); transition: all .15s ease;
     }
-    .kv-btn:hover { border-color: var(--amber-dim); background: rgba(24, 56, 40, 0.9); }
+    .kv-btn:hover { border-color: var(--amber-dim); background: var(--panel-hi); }
     .kv-btn:disabled { opacity:0.4; cursor:not-allowed; }
-    .kavach[data-theme="light"] .kv-btn {
-      background: rgba(215, 226, 212, 0.8);
-      border-color: #C8E6C0;
-      color: var(--header-text);
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-    }
-    .kavach[data-theme="light"] .kv-btn:hover {
-      background: rgba(205, 220, 200, 0.95);
-      border-color: #B5DEB0;
-    }
-    .kv-btn-primary { background: var(--amber); border-color: var(--amber); color:#1A1305; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+    .kv-btn-primary { background: var(--amber); border-color: var(--amber); color:#1A1305; }
     .kv-btn-primary:hover { background:#f0b155; border-color:#f0b155; }
     .kv-btn-primary:disabled { background: var(--amber-dim); border-color: var(--amber-dim); color:#00000066;}
-    .kavach[data-theme="light"] .kv-btn-primary { 
-      background: var(--header-green); 
-      border-color: #B5DEB0; 
-      color: var(--header-text);
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-    }
-    .kavach[data-theme="light"] .kv-btn-primary:hover { 
-      background: #C8E6C0; 
-      border-color: #9FD699;
-    }
     .kv-btn-ghost { background:transparent; }
 
-    .kv-panel { background: rgba(16, 30, 24, 0.85); border: 1px solid var(--line); border-radius: 4px; backdrop-filter: blur(8px); }
-    .kavach[data-theme="light"] .kv-panel { background: rgba(247, 244, 238, 0.92); backdrop-filter: blur(8px); }
+    .kv-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
     .kv-tag {
       font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.08em;
-      padding: 3px 7px; border-radius: 2px; border: 1px solid var(--line); color: var(--amber);
+      padding: 3px 7px; border-radius: 2px; border: 1px solid var(--line); color: var(--text-muted);
       text-transform: uppercase; display:inline-flex; align-items:center; gap:5px;
-      background: rgba(255, 217, 102, 0.1);
     }
 
     .kv-panel {
@@ -389,75 +357,31 @@ body,
       outline-offset: 2px;
       box-shadow: 0 0 0 4px rgba(232,163,61,0.12);
     }
-    .kavach[data-theme="light"] button:focus-visible, 
-    .kavach[data-theme="light"] input:focus-visible, 
-    .kavach[data-theme="light"] select:focus-visible {
-      outline: 2px solid rgba(76, 175, 80, 0.8);
-      outline-offset: 2px;
-      box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.12);
-    }
     .kv-accessibility-toolbar {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     }
     .kv-accessibility-btn {
       display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
-      padding: 8px 12px; border: 1px solid var(--line); background: rgba(23,34,26,0.95);
+      padding: 8px 12px; border: 1px solid var(--line); background: rgba(23,34,26,0.9);
       color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
-      text-transform: uppercase; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      text-transform: uppercase;
     }
     .kv-accessibility-btn.is-active {
-      border-color: rgba(255, 217, 102, 0.9); background: rgba(255, 217, 102, 0.15); color: var(--amber); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
-    .kavach[data-theme="light"] .kv-accessibility-btn {
-      background: rgba(215, 226, 212, 0.9);
-      border-color: #C8E6C0;
-      color: var(--header-text);
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
-    }
-    .kavach[data-theme="light"] .kv-accessibility-btn.is-active {
-      background: rgba(76, 175, 80, 0.2);
-      border-color: #4CAF50;
-      color: #2D7A4F;
+      border-color: rgba(232,163,61,0.8); background: rgba(232,163,61,0.12); color: var(--amber);
     }
     .kv-status-pill {
       display:inline-flex; align-items:center; gap:6px; padding: 4px 8px; border-radius: 999px;
-      border:1px solid var(--line); background: rgba(17,26,19,0.95); color: var(--text-muted);
+      border:1px solid var(--line); background: rgba(17,26,19,0.9); color: var(--text-muted);
       font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
-    .kavach[data-theme="light"] .kv-status-pill {
-      background: rgba(220, 238, 216, 0.9);
-      border-color: #C8E6C0;
-      color: #3D6A5A;
-      text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     }
     .kv-status-pill .dot {
       width: 7px; height: 7px; border-radius: 50%; background: var(--low); display:inline-block;
       box-shadow: 0 0 12px rgba(76,175,109,0.7);
     }
-    .kv-status-pill.listening .dot { background: var(--amber); box-shadow: 0 0 12px rgba(255,217,102,0.7); }
-    .kv-status-pill.speaking .dot { background: var(--high); box-shadow: 0 0 12px rgba(255,107,107,0.7); }
-    
-    .kavach input, .kavach select, .kavach textarea {
-      background: rgba(16, 30, 24, 0.85);
-      color: var(--text);
-      border: 1px solid var(--line);
-      backdrop-filter: blur(8px);
-    }
-    .kavach input::placeholder, .kavach textarea::placeholder {
-      color: var(--text-dim);
-    }
-    .kavach[data-theme="light"] input, 
-    .kavach[data-theme="light"] select, 
-    .kavach[data-theme="light"] textarea {
-      background: rgba(247, 244, 238, 0.92);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
+    .kv-status-pill.listening .dot { background: var(--amber); box-shadow: 0 0 12px rgba(232,163,61,0.7); }
+    .kv-status-pill.speaking .dot { background: var(--high); box-shadow: 0 0 12px rgba(228,85,61,0.7); }
   `}</style>
 );
-
-/* ============================== HELPERS ============================== */
 
 /* ============================== HELPERS ============================== */
 
@@ -1153,13 +1077,10 @@ function Header() {
   });
 
   return (
-    <div className="kv-header" style={{ padding: "18px 28px", borderBottom: "2px solid var(--line)", borderTop: "4px solid var(--amber)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, background: "rgba(10,16,12,0.7)", backdropFilter: "blur(6px)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <img src="/assets/logo.png" alt="KAVACH Logo" style={{ height: 40, width: "auto", objectFit: "contain" }} />
-        <div>
-          <div className="kv-mono" style={{ fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.12em", marginBottom: 3 }}>KAVACH / {current?.id.toUpperCase()}</div>
-          <div className="kv-display" style={{ fontSize: 22, fontWeight: 700 }}>{getTranslation(language, `nav.${page}`, current?.label)}</div>
-        </div>
+    <div style={{ padding: "18px 28px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, background: "rgba(10,16,12,0.7)", backdropFilter: "blur(6px)" }}>
+      <div>
+        <div className="kv-mono" style={{ fontSize: 10, color: "var(--text-dim)", letterSpacing: "0.12em", marginBottom: 3 }}>KAVACH / {current?.id.toUpperCase()}</div>
+        <div className="kv-display" style={{ fontSize: 22, fontWeight: 700 }}>{getTranslation(language, `nav.${page}`, current?.label)}</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", justifyContent: "flex-end" }}>
         <GlobalSearch />
@@ -1292,14 +1213,14 @@ function CommandCenter() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18 }}>
-        <div className="kv-panel" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="kv-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px" }}>
+        <div className="kv-panel" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div className="kv-display" style={{ fontSize: 16, fontWeight: 700 }}>ZONE RISK OVERVIEW</div>
             <button className="kv-btn kv-btn-ghost" onClick={() => navigate("gis", { zoneId: null, gisRiskFilter: "all", gisSpeciesFilter: "all" })} style={{ fontSize: 11, padding: "6px 10px" }}>
               OPEN GIS MAP <ArrowRight size={12} />
             </button>
           </div>
-          <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {ZONES.map(z => (
               <button key={z.id} onClick={() => navigate("gis", { zoneId: z.id, gisRiskFilter: "all", gisSpeciesFilter: "all" })}
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--panel-raised)", border: "1px solid var(--line-soft)", borderRadius: 3, textAlign: "left" }}
@@ -1317,14 +1238,14 @@ function CommandCenter() {
           </div>
         </div>
 
-        <div className="kv-panel" style={{ padding: 0, overflow: "hidden" }}>
-          <div className="kv-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px" }}>
+        <div className="kv-panel" style={{ padding: 22 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div className="kv-display" style={{ fontSize: 16, fontWeight: 700 }}>RECENT ALERTS</div>
             <button className="kv-btn kv-btn-ghost" onClick={() => navigate("alerts", { alertStatusFilter: "all", alertPriorityFilter: "all" })} style={{ fontSize: 11, padding: "6px 10px" }}>
               VIEW ALL <ArrowRight size={12} />
             </button>
           </div>
-          <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {recentAlerts.length === 0 && <div style={{ fontSize: 12.5, color: "var(--text-dim)" }}>No alerts yet — run the demo to generate one.</div>}
             {recentAlerts.map(a => (
               <button key={a.id} onClick={() => navigate("alerts", { alertStatusFilter: "all", alertPriorityFilter: "all", highlightAlertId: a.id })}
@@ -1351,6 +1272,7 @@ function WildlifeDetection() {
 
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [uploadedName, setUploadedName] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [stageIdx, setStageIdx] = useState(-1);
   const [result, setResult] = useState(null);
@@ -1365,6 +1287,7 @@ function WildlifeDetection() {
 
   function pickDemo(id) {
     setUploadedName(null);
+    setUploadedFile(null);
     setSelectedImageId(id);
     setResult(null);
   }
@@ -1373,6 +1296,7 @@ function WildlifeDetection() {
     if (!f) return;
     setSelectedImageId(null);
     setUploadedName(f.name);
+    setUploadedFile(f);
     setResult(null);
   }
 
@@ -1386,14 +1310,53 @@ function WildlifeDetection() {
       const t = setTimeout(() => setStageIdx(i), i * 650);
       timers.current.push(t);
     });
-    const done = setTimeout(() => {
-      const id = nextId("D");
-      const det = { id, species: activeSource.species, confidence: activeSource.confidence, zone: activeSource.zone, timestamp: "Just now" };
-      setResult(det);
-      addDetection(det);
-      setAnalyzing(false);
-    }, PROCESSING_STAGES.length * 650);
-    timers.current.push(done);
+    const stageDuration = PROCESSING_STAGES.length * 650;
+
+    if (uploadedFile) {
+      // Real image: run actual YOLO inference via the FastAPI backend.
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+
+      const inferencePromise = fetch(`${API_BASE_URL}/predict`, { method: "POST", body: formData })
+        .then(res => {
+          if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+          return res.json();
+        });
+
+      const stagesDone = new Promise(resolve => {
+        const t = setTimeout(resolve, stageDuration);
+        timers.current.push(t);
+      });
+
+      Promise.all([inferencePromise, stagesDone])
+        .then(([data]) => {
+          const best = (data.detections || [])[0]; // backend returns detections sorted by confidence desc
+          const species = best ? best.species : "No Detection";
+          const confidence = best ? Math.round(best.confidence) : 0;
+          const matchedZone = ZONES.find(z => z.species === species);
+          const zone = matchedZone ? matchedZone.id : ZONES[0].id;
+          const id = nextId("D");
+          const det = { id, species, confidence, zone, timestamp: "Just now" };
+          setResult(det);
+          addDetection(det);
+          setAnalyzing(false);
+        })
+        .catch(err => {
+          console.error("YOLO inference failed:", err);
+          setAnalyzing(false);
+          window.alert(`Could not reach the wildlife detection backend at ${API_BASE_URL}. Make sure predict.py is running.`);
+        });
+    } else {
+      // Demo capture: simulated result using its preset label (no real file to send to YOLO).
+      const done = setTimeout(() => {
+        const id = nextId("D");
+        const det = { id, species: activeSource.species, confidence: activeSource.confidence, zone: activeSource.zone, timestamp: "Just now" };
+        setResult(det);
+        addDetection(det);
+        setAnalyzing(false);
+      }, stageDuration);
+      timers.current.push(done);
+    }
   }
 
   const filteredDetections = detections.filter(d =>
@@ -1403,12 +1366,11 @@ function WildlifeDetection() {
 
   return (
     <div className="kv-fadein" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
-      <div className="kv-panel" style={{ padding: 0, overflow: "hidden" }}>
-        <div className="kv-section-header" style={{ padding: "14px 16px" }}>
-          <div className="kv-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>1 · SELECT INPUT</div>
-          <div style={{ fontSize: 12.5, color: "var(--text-dim)" }}>Upload a camera-trap image or choose a demo capture.</div>
-        </div>
-        <div style={{ padding: 16 }}>
+      <div className="kv-panel" style={{ padding: 22 }}>
+        <div className="kv-display" style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>1 · SELECT INPUT</div>
+        <div style={{ fontSize: 12.5, color: "var(--text-dim)", marginBottom: 16 }}>Upload a camera-trap image or choose a demo capture.</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
           {DEMO_IMAGES.map(img => {
             const active = selectedImageId === img.id;
             return (
@@ -1467,12 +1429,11 @@ function WildlifeDetection() {
         )}
       </div>
 
-      <div className="kv-panel" style={{ padding: 0, overflow: "hidden" }}>
-        <div className="kv-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px" }}>
+      <div className="kv-panel" style={{ padding: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div className="kv-display" style={{ fontSize: 16, fontWeight: 700 }}>DETECTION HISTORY</div>
           <span className="kv-tag">DEMO DATA</span>
         </div>
-        <div style={{ padding: 16 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
           <select value={detectionSpeciesFilter} onChange={e => setDetectionSpeciesFilter(e.target.value)} style={selStyle}>
             <option value="all">All species</option>
@@ -1503,7 +1464,6 @@ function WildlifeDetection() {
             </div>
           ))}
           {filteredDetections.length === 0 && <div style={{ fontSize: 12.5, color: "var(--text-dim)" }}>No detections match this filter.</div>}
-        </div>
         </div>
       </div>
     </div>
@@ -1551,14 +1511,14 @@ function RiskIntelligence() {
 
   return (
     <div className="kv-fadein" style={{ maxWidth: 880 }}>
-      <div className="kv-panel" style={{ padding: 0, overflow: "hidden", marginBottom: 18 }}>
-        <div className="kv-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", marginBottom: 0 }}>
+      <div className="kv-panel" style={{ padding: 22, marginBottom: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
           <div className="kv-display" style={{ fontSize: 16, fontWeight: 700 }}>INPUT FEATURES</div>
           <select value={pendingRiskZoneId} onChange={e => setPendingRiskZoneId(e.target.value)} style={selStyle}>
             {ZONES.map(z => <option key={z.id} value={z.id}>{z.id} · {z.name} ({z.species})</option>)}
           </select>
         </div>
-        <div style={{ padding: 22 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {featureLabels.map(([label, key]) => (
             <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 14px", background: "var(--panel-raised)", border: "1px solid var(--line-soft)", borderRadius: 3 }}>
               <span style={{ fontSize: 13 }}>{label}</span>
@@ -1566,11 +1526,9 @@ function RiskIntelligence() {
             </div>
           ))}
         </div>
-        <div style={{ padding: "0 22px 22px 22px" }}>
-        <button className="kv-btn kv-btn-primary" style={{ marginTop: 0, width: "100%", justifyContent: "center" }} disabled={analyzing} onClick={run}>
+        <button className="kv-btn kv-btn-primary" style={{ marginTop: 18, width: "100%", justifyContent: "center" }} disabled={analyzing} onClick={run}>
           {analyzing ? <><RefreshCw size={14} style={{ animation: "kv-spin 1s linear infinite" }} /> RUNNING RISK MODEL…</> : <><Crosshair size={14} /> RUN RISK ANALYSIS</>}
         </button>
-        </div>
       </div>
 
       {showResult && (
@@ -2004,12 +1962,12 @@ function PipelinePage() {
                 </div>
                 {i < stages.length - 1 && <div style={{ width: 1, flex: 1, background: "var(--line)", minHeight: 34 }} />}
               </div>
-              <button onClick={s.go} className="kv-panel" style={{ flex: 1, marginBottom: 18, padding: "14px 16px", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, color: "var(--text)" }}
+              <button onClick={s.go} className="kv-panel" style={{ flex: 1, marginBottom: 18, padding: "14px 16px", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--amber-dim)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--line)"}
               >
                 <div>
-                  <div className="kv-display" style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{i + 1}. {s.id}</div>
+                  <div className="kv-display" style={{ fontSize: 15, fontWeight: 700 }}>{i + 1}. {s.id}</div>
                   <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.5 }}>{s.desc}</div>
                 </div>
                 <ChevronRight size={16} color="var(--text-dim)" />
