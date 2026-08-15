@@ -526,12 +526,19 @@ const useApp = () => useContext(Ctx);
 function AppProvider({ children }) {
   const [page, setPage] = useState("command");
   const [detections, setDetections] = useState(INITIAL_DETECTIONS);
-  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
+  const [alerts, setAlerts] = useState(() => {
+    const storedAlerts = getStoredPreference("kavach-alerts", JSON.stringify(INITIAL_ALERTS));
+    try {
+      const parsed = JSON.parse(storedAlerts);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_ALERTS;
+    } catch (error) {
+      return INITIAL_ALERTS;
+    }
+  });
 
   const [selectedZoneId, setSelectedZoneId] = useState(null);
   const [gisRiskFilter, setGisRiskFilter] = useState("all");
   const [gisSpeciesFilter, setGisSpeciesFilter] = useState("all");
-
   const [alertPriorityFilter, setAlertPriorityFilter] = useState("all");
   const [alertStatusFilter, setAlertStatusFilter] = useState("all");
   const [highlightAlertId, setHighlightAlertId] = useState(null);
@@ -542,6 +549,10 @@ function AppProvider({ children }) {
 
   const [pendingRiskZoneId, setPendingRiskZoneId] = useState("Z-04");
   const [demoOpen, setDemoOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("kavach-alerts", JSON.stringify(alerts));
+  }, [alerts]);
 
   const [theme, setTheme] = useState(() => {
     const stored = getStoredPreference("kavach-theme", getSystemTheme());
@@ -1722,30 +1733,155 @@ function AlertCard({ alert, highlighted }) {
   );
 }
 
+function AlertHistoryItem({ alert, highlighted }) {
+  const { acknowledgeAlert, navigate } = useApp();
+  const riskLabel = alert.priority?.toUpperCase() || "LOW";
+  return (
+    <div className="kv-panel kv-fadein" style={{ padding: 18, borderColor: highlighted ? "var(--amber)" : "var(--line)", background: highlighted ? "rgba(232,163,61,0.05)" : "var(--panel)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span className="kv-mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>{alert.id}</span>
+          <span className="kv-mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>{alert.timestamp}</span>
+        </div>
+        <span className="kv-tag" style={{ color: alert.status === "PENDING" ? "var(--amber)" : "var(--low)", borderColor: alert.status === "PENDING" ? "var(--amber-dim)" : "#2c4a35" }}>
+          {alert.status}
+        </span>
+      </div>
+
+      <div style={{ marginTop: 14, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+        <div className="kv-mono" style={{ fontSize: 12, letterSpacing: "0.08em", color: riskVar(riskLabel), textTransform: "uppercase" }}>{riskLabel} RISK</div>
+        <div className="kv-display" style={{ fontSize: 18, fontWeight: 700 }}>{alert.species} — Zone {alert.zone}</div>
+      </div>
+
+      <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        <div style={{ padding: "9px 10px", border: "1px solid var(--line-soft)", borderRadius: 3, background: "var(--panel-raised)" }}>
+          <div className="kv-mono" style={{ fontSize: 9.5, color: "var(--text-dim)" }}>RISK SCORE</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{alert.risk}%</div>
+        </div>
+        <div style={{ padding: "9px 10px", border: "1px solid var(--line-soft)", borderRadius: 3, background: "var(--panel-raised)" }}>
+          <div className="kv-mono" style={{ fontSize: 9.5, color: "var(--text-dim)" }}>ZONE</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 4 }}>{alert.zone} · {ZONE_BY_ID[alert.zone]?.name || "Unknown Zone"}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, padding: "10px 12px", background: "var(--panel-raised)", borderRadius: 3, border: "1px solid var(--line-soft)" }}>
+        <div className="kv-mono" style={{ fontSize: 10, color: "var(--text-dim)" }}>REASON</div>
+        <div style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.6, marginTop: 4 }}>{alert.reason}</div>
+      </div>
+
+      <div style={{ marginTop: 12, padding: "10px 12px", background: "var(--panel-raised)", borderRadius: 3, border: "1px solid var(--line-soft)" }}>
+        <div className="kv-mono" style={{ fontSize: 10, color: "var(--text-dim)" }}>RECOMMENDED ACTION</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 4 }}>{alert.recommended}</div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+        <button className="kv-btn" style={{ fontSize: 11 }} onClick={() => navigate("gis", { zoneId: alert.zone, gisRiskFilter: "all", gisSpeciesFilter: "all" })}>
+          <MapIcon size={12} /> VIEW ON MAP
+        </button>
+        <button className="kv-btn" style={{ fontSize: 11 }} onClick={() => navigate("risk", { riskZoneId: alert.zone })}>
+          <ShieldAlert size={12} /> VIEW ANALYSIS
+        </button>
+        {alert.status === "PENDING" && (
+          <button className="kv-btn kv-btn-primary" style={{ fontSize: 11 }} onClick={() => acknowledgeAlert(alert.id)} aria-label={`Acknowledge alert ${alert.id}`}>
+            <Check size={12} /> ACKNOWLEDGE
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AlertsPage() {
   const { alerts, alertPriorityFilter, setAlertPriorityFilter, alertStatusFilter, setAlertStatusFilter, highlightAlertId } = useApp();
+  const [activeTab, setActiveTab] = useState("active");
+
   const filtered = alerts.filter(a =>
     (alertPriorityFilter === "all" || a.priority.toLowerCase() === alertPriorityFilter) &&
     (alertStatusFilter === "all" || a.status.toLowerCase() === alertStatusFilter)
   );
+
+  const summary = useMemo(() => {
+    const total = alerts.length;
+    const high = alerts.filter(a => a.priority === "HIGH").length;
+    const medium = alerts.filter(a => a.priority === "MEDIUM").length;
+    const low = alerts.filter(a => a.priority === "LOW").length;
+    const pending = alerts.filter(a => a.status === "PENDING").length;
+    const acknowledged = alerts.filter(a => a.status === "ACKNOWLEDGED").length;
+    return { total, high, medium, low, pending, acknowledged };
+  }, [alerts]);
+
+  const tabStyle = (tab) => ({
+    padding: "8px 12px",
+    borderRadius: 4,
+    border: "1px solid var(--line)",
+    background: activeTab === tab ? "var(--panel-raised)" : "transparent",
+    color: activeTab === tab ? "var(--text)" : "var(--text-muted)",
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    cursor: "pointer",
+  });
+
   return (
-    <div className="kv-fadein" style={{ maxWidth: 780 }}>
+    <div className="kv-fadein" style={{ maxWidth: 880 }}>
+      <div role="tablist" aria-label="Alert views" style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+        <button type="button" role="tab" aria-selected={activeTab === "active"} onClick={() => setActiveTab("active")} style={tabStyle("active")}>[ Active Alerts ]</button>
+        <button type="button" role="tab" aria-selected={activeTab === "history"} onClick={() => setActiveTab("history")} style={tabStyle("history")}>[ Alert History ]</button>
+      </div>
+
+      {activeTab === "history" && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 18 }}>
+            {[
+              { label: "Total Alerts", value: summary.total },
+              { label: "High Risk", value: summary.high },
+              { label: "Medium Risk", value: summary.medium },
+              { label: "Low Risk", value: summary.low },
+              { label: "Pending", value: summary.pending },
+              { label: "Acknowledged", value: summary.acknowledged },
+            ].map(item => (
+              <div key={item.label} className="kv-panel" style={{ padding: "12px 14px", background: "var(--panel-raised)" }}>
+                <div className="kv-mono" style={{ fontSize: 9.5, color: "var(--text-dim)", letterSpacing: "0.06em" }}>{item.label.toUpperCase()}</div>
+                <div className="kv-display" style={{ fontSize: 24, fontWeight: 700, marginTop: 6 }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
-        <select value={alertPriorityFilter} onChange={e => setAlertPriorityFilter(e.target.value)} style={selStyle}>
+        <select value={alertPriorityFilter} onChange={e => setAlertPriorityFilter(e.target.value)} style={selStyle} aria-label="Filter alerts by risk level">
           <option value="all">Priority: All</option>
           <option value="high">Priority: High</option>
           <option value="medium">Priority: Medium</option>
           <option value="low">Priority: Low</option>
         </select>
-        <select value={alertStatusFilter} onChange={e => setAlertStatusFilter(e.target.value)} style={selStyle}>
+        <select value={alertStatusFilter} onChange={e => setAlertStatusFilter(e.target.value)} style={selStyle} aria-label="Filter alerts by status">
           <option value="all">Status: All</option>
           <option value="pending">Status: Pending</option>
           <option value="acknowledged">Status: Acknowledged</option>
         </select>
       </div>
+
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {filtered.length === 0 && <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No alerts match this filter.</div>}
-        {filtered.map(a => <AlertCard key={a.id} alert={a} highlighted={highlightAlertId === a.id} />)}
+        {activeTab === "active" ? (
+          filtered.length === 0 ? <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No alerts match this filter.</div> : filtered.map(a => <AlertCard key={a.id} alert={a} highlighted={highlightAlertId === a.id} />)
+        ) : (
+          <>
+            {[...alerts].sort((a, b) => b.id.localeCompare(a.id)).filter(a =>
+              (alertPriorityFilter === "all" || a.priority.toLowerCase() === alertPriorityFilter) &&
+              (alertStatusFilter === "all" || a.status.toLowerCase() === alertStatusFilter)
+            ).length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--text-dim)" }}>No alert history match this filter.</div>
+            ) : (
+              [...alerts].sort((a, b) => b.id.localeCompare(a.id)).filter(a =>
+                (alertPriorityFilter === "all" || a.priority.toLowerCase() === alertPriorityFilter) &&
+                (alertStatusFilter === "all" || a.status.toLowerCase() === alertStatusFilter)
+              ).map(a => <AlertHistoryItem key={a.id} alert={a} highlighted={highlightAlertId === a.id} />)
+            )}
+          </>
+        )}
       </div>
     </div>
   );
