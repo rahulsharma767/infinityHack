@@ -7,16 +7,18 @@ import {
   Volume2, VolumeX, Sun, Moon, Accessibility, Pause
 } from "lucide-react";
 
+import RealGISMap from "./gis/RealGISMap.jsx";
+
 /* ============================== BACKEND CONFIG ============================== */
 
 // FastAPI (Ultralytics YOLO) backend — see backend/predict.py
-const API_BASE_URL = "http://localhost:8000";
+export const API_BASE_URL = "http://localhost:8000";
 
 /* ============================== DEMO DATA ============================== */
 
-const SPECIES_LIST = ["Asian Elephant", "Leopard", "Wild Boar", "Spotted Deer", "Tiger"];
+export const SPECIES_LIST = ["Asian Elephant", "Leopard", "Wild Boar", "Spotted Deer", "Tiger"];
 
-const ZONES = [
+export const ZONES = [
   {
     id: "Z-01", name: "Northern Ridge", x: 20, y: 14, riskLevel: "LOW", risk: 18,
     species: "Spotted Deer", recentDetections: 5, historicalConflicts: 0,
@@ -82,7 +84,7 @@ const ZONES = [
   },
 ];
 
-const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
+export const ZONE_BY_ID = Object.fromEntries(ZONES.map(z => [z.id, z]));
 
 const DEMO_IMAGES = [
   { id: "img-1", label: "CT-104.JPG", desc: "Trail Cam · Zone Z-04 · 06:42", species: "Asian Elephant", confidence: 94, zone: "Z-04" },
@@ -385,7 +387,7 @@ body,
 
 /* ============================== HELPERS ============================== */
 
-function riskVar(level) {
+export function riskVar(level) {
   if (level === "HIGH") return "var(--high)";
   if (level === "MEDIUM") return "var(--medium)";
   return "var(--low)";
@@ -403,7 +405,7 @@ function getRecommendation(risk) {
   return "CONTINUE ROUTINE MONITORING";
 }
 
-function RiskBadge({ level, size = "md" }) {
+export function RiskBadge({ level, size = "md" }) {
   const pad = size === "sm" ? "2px 7px" : "4px 10px";
   const fs = size === "sm" ? "10px" : "11px";
   return (
@@ -526,7 +528,7 @@ function useVoiceAccessibility() {
 /* ============================== APP CONTEXT ============================== */
 
 const Ctx = createContext(null);
-const useApp = () => useContext(Ctx);
+export const useApp = () => useContext(Ctx);
 
 function AppProvider({ children }) {
   const [page, setPage] = useState("command");
@@ -1612,7 +1614,7 @@ async function analyze() {
   );
 }
 
-const selStyle = {
+export const selStyle = {
   background: "var(--panel-raised)", border: "1px solid var(--line)", color: "var(--text)",
   fontSize: 12, padding: "8px 10px", borderRadius: 3, outline: "none",
 };
@@ -1748,8 +1750,18 @@ function RiskIntelligence() {
 }
 
 /* ============================== GIS MAP ============================== */
+/* Real PostGIS + FastAPI + React-Leaflet GIS map. See src/gis/RealGISMap.jsx
+   and backend/gis/ — this thin wrapper keeps the rest of this file (and the
+   page-switching/navigation logic below) completely unchanged. */
 
-function ZoneMarker({ zone, muted, onClick, layer }) {
+function GISMap() {
+  return <RealGISMap />;
+}
+
+// Small decorative marker kept for the Intelligence Pipeline walkthrough
+// preview only (unrelated to the real GIS map above) — pixel-identical to
+// the original so that page's UI is untouched.
+function ZoneMarker({ zone, muted, onClick }) {
   const color = riskVar(zone.riskLevel);
   return (
     <div onClick={onClick} style={{
@@ -1768,146 +1780,6 @@ function ZoneMarker({ zone, muted, onClick, layer }) {
     </div>
   );
 }
-
-function GISMap() {
-  const { selectedZoneId, setSelectedZoneId, gisRiskFilter, setGisRiskFilter, gisSpeciesFilter, setGisSpeciesFilter, navigate } = useApp();
-  const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [layer, setLayer] = useState("risk");
-  const dragState = useRef(null);
-
-  const selectedZone = selectedZoneId ? ZONE_BY_ID[selectedZoneId] : null;
-
-  function matchesFilter(z) {
-    const riskOk = gisRiskFilter === "all" ? true
-      : gisRiskFilter === "active" ? z.riskLevel !== "LOW"
-      : z.riskLevel.toLowerCase() === gisRiskFilter;
-    const speciesOk = gisSpeciesFilter === "all" || z.species === gisSpeciesFilter;
-    return riskOk && speciesOk;
-  }
-
-  function onMouseDown(e) { dragState.current = { startX: e.clientX, startY: e.clientY, ox: offset.x, oy: offset.y }; }
-  function onMouseMove(e) {
-    if (!dragState.current) return;
-    const dx = e.clientX - dragState.current.startX;
-    const dy = e.clientY - dragState.current.startY;
-    setOffset({ x: dragState.current.ox + dx, y: dragState.current.oy + dy });
-  }
-  function onMouseUp() { dragState.current = null; }
-
-  return (
-    <div className="kv-fadein" style={{ display: "grid", gridTemplateColumns: selectedZone ? "1fr 340px" : "1fr", gap: 18 }}>
-      <div className="kv-panel" style={{ padding: 16 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14, alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <select value={gisRiskFilter} onChange={e => setGisRiskFilter(e.target.value)} style={selStyle}>
-              <option value="all">Risk: All</option>
-              <option value="low">Risk: Low</option>
-              <option value="medium">Risk: Medium</option>
-              <option value="high">Risk: High</option>
-              <option value="active">Risk: Active (Med+High)</option>
-            </select>
-            <select value={gisSpeciesFilter} onChange={e => setGisSpeciesFilter(e.target.value)} style={selStyle}>
-              <option value="all">Species: All</option>
-              {SPECIES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <button className="kv-btn" onClick={() => setLayer(l => l === "risk" ? "species" : "risk")} style={{ fontSize: 11 }}>
-              <Layers size={13} /> LAYER: {layer.toUpperCase()}
-            </button>
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button className="kv-btn" onClick={() => setZoom(z => Math.max(1, +(z - 0.25).toFixed(2)))}><ZoomOut size={14} /></button>
-            <button className="kv-btn" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}><Compass size={14} /></button>
-            <button className="kv-btn" onClick={() => setZoom(z => Math.min(2.5, +(z + 0.25).toFixed(2)))}><ZoomIn size={14} /></button>
-          </div>
-        </div>
-
-        <div
-          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-          style={{
-            position: "relative", height: 560, borderRadius: 4, overflow: "hidden", border: "1px solid var(--line-soft)",
-            background: "radial-gradient(circle at 30% 20%, #16241a 0%, #0d160f 55%, #0a100c 100%)",
-            cursor: dragState.current ? "grabbing" : "grab",
-          }}
-        >
-          <div style={{
-            position: "absolute", inset: 0,
-            backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)",
-            backgroundSize: "40px 40px", transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: "center",
-          }} />
-          <div style={{
-            position: "absolute", width: 3, height: 3, borderRadius: "50%", left: "50%", top: "50%",
-            transform: `translate(-50%,-50%) rotate(0deg)`, transformOrigin: "center",
-          }}>
-            <div style={{ position: "absolute", width: 420, height: 420, left: -210, top: -210, borderRadius: "50%", border: "1px solid rgba(232,163,61,0.08)" }} />
-            <div style={{ position: "absolute", width: 420, height: 420, left: -210, top: -210, background: "conic-gradient(from 0deg, rgba(232,163,61,0.14), transparent 40deg)", borderRadius: "50%", animation: "kv-sweep 6s linear infinite" }} />
-          </div>
-
-          <div style={{ position: "absolute", inset: 0, transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: "center" }}>
-            {ZONES.map(z => (
-              <ZoneMarker key={z.id} zone={z} layer={layer} muted={!matchesFilter(z)}
-                onClick={() => setSelectedZoneId(z.id)} />
-            ))}
-          </div>
-
-          <div style={{ position: "absolute", bottom: 12, left: 12, display: "flex", gap: 14 }} className="kv-mono">
-            {["LOW", "MEDIUM", "HIGH"].map(l => (
-              <div key={l} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: "var(--text-muted)" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: riskVar(l) }} /> {l}
-              </div>
-            ))}
-          </div>
-          <div style={{ position: "absolute", top: 12, right: 14 }} className="kv-tag">DEMO GIS · {ZONES.filter(matchesFilter).length} ZONES SHOWN</div>
-        </div>
-      </div>
-
-      {selectedZone && (
-        <div className="kv-panel kv-slidein" style={{ padding: 20, height: "fit-content", position: "sticky", top: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div className="kv-mono" style={{ fontSize: 11, color: "var(--text-dim)" }}>{selectedZone.id}</div>
-              <div className="kv-display" style={{ fontSize: 19, fontWeight: 700 }}>{selectedZone.name}</div>
-            </div>
-            <button onClick={() => setSelectedZoneId(null)} style={{ background: "transparent", border: "none", color: "var(--text-dim)" }}><X size={16} /></button>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 14 }}>
-            <div className="kv-display" style={{ fontSize: 36, fontWeight: 700, color: riskVar(selectedZone.riskLevel) }}>{selectedZone.risk}%</div>
-            <RiskBadge level={selectedZone.riskLevel} />
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>{selectedZone.species}</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
-            <InfoCell label="Recent Detections" value={selectedZone.recentDetections} />
-            <InfoCell label="Historical Conflicts" value={selectedZone.historicalConflicts} />
-            <InfoCell label="Settlement Proximity" value={selectedZone.settlementProximity} />
-            <InfoCell label="Recommended" value={getRecommendation(selectedZone.risk)} small />
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <div className="kv-mono" style={{ fontSize: 10.5, color: "var(--text-dim)", marginBottom: 6 }}>ENVIRONMENTAL CONTEXT</div>
-            <div style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.6 }}>{selectedZone.environmentalContext}</div>
-          </div>
-
-          <button className="kv-btn kv-btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 18 }}
-            onClick={() => navigate("risk", { riskZoneId: selectedZone.id })}>
-            VIEW FULL RISK ANALYSIS <ArrowRight size={13} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function InfoCell({ label, value, small }) {
-  return (
-    <div style={{ background: "var(--panel-raised)", border: "1px solid var(--line-soft)", borderRadius: 3, padding: "9px 11px" }}>
-      <div className="kv-mono" style={{ fontSize: 9.5, color: "var(--text-dim)", marginBottom: 4 }}>{label.toUpperCase()}</div>
-      <div style={{ fontSize: small ? 11.5 : 14, fontWeight: 600 }}>{value}</div>
-    </div>
-  );
-}
-
 /* ============================== ALERTS ============================== */
 
 function AlertCard({ alert, highlighted }) {
