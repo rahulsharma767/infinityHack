@@ -1,12 +1,3 @@
 {
-  "services": {
-    "frontend": {
-      "root": "./",
-      "framework": "vite"
-    },
-    "backend": {
-      "root": "backend/",
-      "entrypoint": "predict:app"
-    }
-  }
+  "framework": "vite"
 }
