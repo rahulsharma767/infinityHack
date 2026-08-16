@@ -539,3 +539,17 @@ KAVACH aims to transform fragmented wildlife observations into **predictive, geo
 ## 🌐 Live Application
 
 **[🚀 Open KAVACH Live Demo](https://infinity-hack-git-main-rahul810840-5774s-projects.vercel.app/)**
+
+## 🎥 Project Demo
+
+**▶️ Watch the KAVACH Project Demo on YouTube**
+
+[📺 Watch KAVACH Demo](https://youtu.be/L-eRB-yD1-I?si=ehaydnY2iW-rAbGb)
+
+A short demonstration of the KAVACH wildlife detection and conflict-prevention platform.
+
+📜 License
+
+This project was developed as a hackathon/academic prototype.
+Add an appropriate open-source license if the repository is intended for public reuse.
+
